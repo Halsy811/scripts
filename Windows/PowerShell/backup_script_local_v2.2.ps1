@@ -1,22 +1,9 @@
 ﻿<#
 .SYNOPSIS
-    Version 2.1 - LLM обработка
+    Version 2.2 - LLM обработка
     
     Ключевые исправления и улучшения:
-    - Движок Robocopy: Максимальная скорость и надежность для локальных и сетевых (SMB/UNC) путей.
-    - Устранена причина Exit Code 16: скрипт интеллектуально разбирает каждый фильтр на SourceDir, 
-      DestDir и FileMask, запуская корректную команду Robocopy для каждого правила (Robocopy не 
-      поддерживает относительные пути в аргументе фильтра, это обходится автоматически).
-    - Внедрено двойное логирование: краткая, удобочитаемая сводка отправляется на Email, 
-      а максимально детальный лог (включая вывод Robocopy и статусы каждого этапа) сохраняется в .txt файл.
-    - В тело Email добавлен явный "Пустой к файлу лога на диске" для мгновенной навигации при отладке.
-    - Устранена ошибка "Коллекция имела фиксированный размер" при усечении длинных списков файлов 
-      за счет использования безопасного объединения массивов (+=) вместо .Add() после конвейера.
-    - Полная совместимость с Windows PowerShell 5.1 (отсутствуют операторы, поддерживаемые только в PS 7+).
-    - Изолированный массив $taskErrors: статус задачи зависит только от реальных сбоев, 
-      "фантомные" ошибки PowerShell полностью исключены из расчета Exit Code.
-    - Безопасное построение относительных путей через .Substring() вместо .Replace().
-    - Логирование приведено к строгому древовидному виду с отступами (4 пробела).
+    - Исправлено удаление старых лог-файлов
 
     НАЗНАЧЕНИЕ:
     Скрипт для создания инкрементальных или полных резервных копий локальных и сетевых данных 
@@ -452,31 +439,39 @@ foreach ($task in $tasksList) {
     # ---------------------------------------------------------
     if ($task.quantity_days -gt 0) {
         try {
-            $allBackups = Get-ChildItem -Path $task.root_backup -Directory | 
-                          Where-Object { $_.Name -match '^\d{4}_\d{2}_\d{2}' } |
-                          Sort-Object Name
+            $cutoffDate = (Get-Date).AddDays(-$task.quantity_days)
             
-            if ($allBackups.Count -gt $task.quantity_days) {
-                $toDelete = $allBackups | Select-Object -SkipLast $task.quantity_days
-                foreach ($folder in $toDelete) {
-                    try {
-                        Remove-Item -Path $folder.FullName -Recurse -Force -ErrorAction Stop
-                        $deletedFolders.Add($folder.Name) | Out-Null
-                        Write-DetailLog "Удален старый бекап: $($folder.Name)"
-                    } catch {
-                        $taskErrors.Add("Failed to delete $($folder.Name): $_") | Out-Null
-                    }
+            # Удаляем старые директории бекапов по дате создания
+            $oldBackups = Get-ChildItem -Path $task.root_backup -Directory | 
+                          Where-Object { $_.CreationTime -lt $cutoffDate } |
+                          Sort-Object CreationTime
+            
+            foreach ($folder in $oldBackups) {
+                try {
+                    Remove-Item -Path $folder.FullName -Recurse -Force -ErrorAction Stop
+                    $deletedFolders.Add($folder.Name) | Out-Null
+                    Write-DetailLog "Удален старый бекап: $($folder.Name) (создан: $($folder.CreationTime))"
+                } catch {
+                    $taskErrors.Add("Failed to delete $($folder.Name): $_") | Out-Null
                 }
             }
             
-            $cutoffDate = (Get-Date).AddDays(-$task.quantity_days)
-            Get-ChildItem -Path $task.root_backup -Filter "*.log" | Where-Object { $_.LastWriteTime -lt $cutoffDate } | Remove-Item -Force -ErrorAction SilentlyContinue
-            Get-ChildItem -Path $task.root_backup -Filter "*.txt" | Where-Object { $_.LastWriteTime -lt $cutoffDate -and $_.Name -ne (Split-Path $logFile -Leaf) } | Remove-Item -Force -ErrorAction SilentlyContinue
+            # Удаляем старые .log файлы по дате создания (только в корневой директории)
+            Get-ChildItem -Path $task.root_backup -Filter "*.log" -File | 
+                Where-Object { $_.CreationTime -lt $cutoffDate } | 
+                Remove-Item -Force -ErrorAction SilentlyContinue
             
-            $currentBackups = Get-ChildItem -Path $task.root_backup -Directory | 
-                              Where-Object { $_.Name -match '^\d{4}_\d{2}_\d{2}' } |
-                              Sort-Object Name -Descending
-            foreach ($folder in $currentBackups) {
+            # Удаляем старые .txt файлы по дате создания (только в корневой директории), исключая текущий лог
+            $currentLogFile = Split-Path $logFile -Leaf
+            Get-ChildItem -Path $task.root_backup -Filter "*.txt" -File | 
+                Where-Object { $_.CreationTime -lt $cutoffDate -and $_.Name -ne $currentLogFile } | 
+                Remove-Item -Force -ErrorAction SilentlyContinue
+            
+            # Получаем список оставшихся директорий бекапов
+            $remainingBackups = Get-ChildItem -Path $task.root_backup -Directory | 
+                                Where-Object { $_.Name -match '^\d{4}_\d{2}_\d{2}' } |
+                                Sort-Object Name -Descending
+            foreach ($folder in $remainingBackups) {
                 $remainingFolders.Add($folder.Name) | Out-Null
             }
         } catch {
