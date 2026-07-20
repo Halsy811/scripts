@@ -458,7 +458,7 @@ foreach ($task in $tasksList) {
             
             # Удаляем старые .log файлы по дате создания (только в корневой директории)
             Get-ChildItem -Path $task.root_backup -Filter "*.log" -File | 
-                Where-Object { $_.CreationTime -lt $cutoffDate } | 
+                Where-Object {$_.CreationTime -lt $cutoffDate} | 
                 Remove-Item -Force -ErrorAction SilentlyContinue
             
             # Удаляем старые .txt файлы по дате создания (только в корневой директории), исключая текущий лог
