@@ -194,6 +194,53 @@ foreach ($task in $tasksList) {
     $deletedFolders = New-Object System.Collections.ArrayList
     $remainingFolders = New-Object System.Collections.ArrayList
 
+	$header = "$($task.copyed_directory) => $($task.remoteBasePath)/$($task.remoteBackupFolder)/$date"
+    
+    Write-DetailLog $header
+    Write-EmailLog $header
+
+    # Путь к файлу лога в системе
+    Write-EmailLog "Путь к файлу лога на диске: $logFile"
+    Write-Host "Путь к файлу лога на диске: $logFile"
+
+	# ---------------------------------------------------------
+    # ОТПРАВКА ПОЧТЫ (Информирование о начале работы отдельным письмом)
+    # ---------------------------------------------------------
+    if ([int]$task.send_message -eq 1) {
+        try {
+            
+            $startHeaderLine = " == START TASK == "
+            
+            # В письмо идет ТОЛЬКО краткая сводка $emailBody
+            $emailContent = $($emailBody -join "`n") + "`n$startHeaderLine"
+            
+            $mes = New-Object System.Net.Mail.MailMessage
+            $mes.From = $mailFrom
+            $mes.To.Add($mailTo)
+            $mes.Subject = $subjectLine + $startHeaderLine
+            $mes.IsBodyHTML = $false
+            $mes.Body = $emailContent
+            
+            # А в прикрепленный файл идет ПОЛНЫЙ детальный лог $logFile
+            if (Test-Path $logFile) {
+                $att = New-Object System.Net.Mail.Attachment($logFile)
+                $mes.Attachments.Add($att)
+            }
+
+            $smtp = New-Object Net.Mail.SmtpClient($smtpServer, $smtpPort)
+            $smtp.EnableSSL = $true
+            $smtp.Credentials = New-Object System.Net.NetworkCredential($mailFrom, $mailFromPas)
+            $smtp.Send($mes)
+            $mes.Dispose()
+            $smtp.Dispose()
+            Write-Host "Email sent successfully for task: $($task.dirName)"
+        } catch {
+            Write-Warning "Failed to send email for task: $_"
+        }
+    }
+
+	#############################################
+
     Write-Host "Processing task: $($task.copyed_directory) -> $fullRemotePath"
 
     try {
@@ -226,13 +273,6 @@ foreach ($task in $tasksList) {
         continue
     }
 
-    $header = "$($task.copyed_directory) => $($task.remoteBasePath)/$($task.remoteBackupFolder)/$date"
-    Write-DetailLog $header
-    Write-EmailLog $header
-    
-    # Путь к файлу лога в системе
-    Write-EmailLog "Путь к файлу лога на диске: $logFile"
-    Write-Host "Путь к файлу лога на диске: $logFile"
     Write-EmailLog "------------------------------------------------------------------------------"
 
     # ---------------------------------------------------------
