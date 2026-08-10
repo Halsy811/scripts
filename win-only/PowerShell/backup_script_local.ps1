@@ -1,9 +1,9 @@
 ﻿<#
 .SYNOPSIS
-    Version 2.2 - LLM обработка
+    Version 2.3 - LLM обработка
     
     Ключевые исправления и улучшения:
-    - Исправлено удаление старых лог-файлов
+    - Добавлена отправка messageMail о начале работы скрипта
 
     НАЗНАЧЕНИЕ:
     Скрипт для создания инкрементальных или полных резервных копий локальных и сетевых данных 
@@ -83,18 +83,18 @@
 
 ################### Изменяемые переменные ####################
 
-$ScriptLabel = "Robocopy backup - URPcalendar"
+$ScriptLabel = "Robocopy backup"
 
 $tasksListStr = @(       
     # Формат: [Откуда]::[Куда]::[Фильтр]::[Mail 0/1]::[Дни хранения]::[Ключи Robocopy]
-    "F:\Cale::F:\Backup::dogov.ics::1::3::/s /b /r:6 /MT:128 /LEV:1"
+    "F:\Calcul::F:\Backup::::1::3::/s /b /r:6 /MT:128 /LEV:1"
 )
 
 $desiredLength = 16						# Длина генерируемого хэша
 $messageBodyLength = 40     			# Макс. строк структуры в Email (в файле лога будет больше)
-$mailFrom = "mail.mail.ru"		# От кого отправлять почту
-$mailFromPas = "password"	# Пароль (от кого)
-$mailTo = "fromMail.mail.ru"		# Кому отправлять почту
+$mailFrom = "mail.mail.ru"				# От кого отправлять почту
+$mailFromPas = "password"				# Пароль (от кого)
+$mailTo = "fromMail.mail.ru"			# Кому отправлять почту
 $smtpServer = "smtp.mail.ru"			# Сервер Mail
 $smtpPort = 587							# Порта сервера Mail                        
 
@@ -200,6 +200,46 @@ foreach ($task in $tasksList) {
         $filterList = $task.filesFilter -split '[,;]' | ForEach-Object { $_.Trim() }
     }
 
+    $header = "$($task.copyed_directory) => $($task.target_directory)"
+    Write-DetailLog $header
+    Write-EmailLog $header
+    Write-EmailLog "Путь к файлу лога на диске: $logFile"
+
+	# ---------------------------------------------------------
+    # ОТПРАВКА ПОЧТЫ (Информирование о начале работы отдельным письмом)
+    # ---------------------------------------------------------
+    if ([int]$task.send_message -eq 1) {
+        try {
+
+			$startHeaderLine = " == START TASK == "
+
+            $emailContent = $($emailBody -join "`n") + "`n$startHeaderLine"
+            
+            $mes = New-Object System.Net.Mail.MailMessage
+            $mes.From = $mailFrom
+            $mes.To.Add($mailTo)
+            $mes.Subject = $subjectLine + $startHeaderLine
+            $mes.IsBodyHTML = $false
+            $mes.Body = $emailContent
+            
+            # В прикрепленный файл идет ПОЛНЫЙ детальный лог $logFile
+            # if (Test-Path $logFile) {
+            #     $att = New-Object System.Net.Mail.Attachment($logFile)
+            #     $mes.Attachments.Add($att)
+            # }
+
+            $smtp = New-Object Net.Mail.SmtpClient($smtpServer, $smtpPort)
+            $smtp.EnableSSL = $true
+            $smtp.Credentials = New-Object System.Net.NetworkCredential($mailFrom, $mailFromPas)
+            $smtp.Send($mes)
+            $mes.Dispose()
+            $smtp.Dispose()
+            Write-Host "Email sent successfully for task: $($task.dirName)"
+        } catch {
+            Write-Warning "Failed to send email for task: $_"
+        }
+    }
+
     Write-Host "Processing task: $($task.copyed_directory) -> $($task.target_directory)"
 
     try {
@@ -217,10 +257,6 @@ foreach ($task in $tasksList) {
         continue
     }
 
-    $header = "$($task.copyed_directory) => $($task.target_directory)"
-    Write-DetailLog $header
-    Write-EmailLog $header
-    Write-EmailLog "Путь к файлу лога на диске: $logFile"
     Write-EmailLog "------------------------------------------------------------------------------"
 
     Write-DetailLog "------------------------------------------------------------------------------"

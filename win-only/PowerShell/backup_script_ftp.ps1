@@ -1,20 +1,9 @@
 ﻿<#
 .SYNOPSIS
-    Version 2.0 - LLM обработка
+    Version 2.1 - LLM обработка
     
     Ключевые исправления и улучшения:
-    - Внедрено двойное логирование: краткая, удобочитаемая сводка отправляется на Email, 
-      а максимально детальный лог (каждый файл, каждый путь, статусы) сохраняется в .txt файл.
-    - В тело Email добавлен явный "Путь к файлу лога на диске" для мгновенной навигации при отладке.
-    - Устранена ошибка "Коллекция имела фиксированный размер" при усечении длинных списков файлов 
-      за счет использования безопасного объединения массивов (+=) вместо .Add() после конвейера.
-    - Умная обработка масок: если путь в фильтре заканчивается на "\*" или "/*", скрипт 
-      автоматически применяет рекурсивный поиск (-Recurse), захватывая файлы из вложенных папок.
-    - Полностью устранены "фантомные" ошибки модуля WinSCP (GetFileInfo, already exists) 
-      благодаря использованию изолированного массива $taskErrors вместо глобального $Error.
-    - Безопасное построение относительных путей через .Substring() вместо .Replace(), 
-      что предотвращает поломку путей, если имя корневой папки повторяется внутри.
-    - Логирование приведено к строгому древовидному виду с отступами (4 пробела).
+    - Добавлена отправка messageMail о начале работы скрипта
 
     НАЗНАЧЕНИЕ:
     Скрипт для создания инкрементальных или полных резервных копий локальных данных 
@@ -194,6 +183,53 @@ foreach ($task in $tasksList) {
     $deletedFolders = New-Object System.Collections.ArrayList
     $remainingFolders = New-Object System.Collections.ArrayList
 
+	$header = "$($task.copyed_directory) => $($task.remoteBasePath)/$($task.remoteBackupFolder)/$date"
+    
+    Write-DetailLog $header
+    Write-EmailLog $header
+
+    # Путь к файлу лога в системе
+    Write-EmailLog "Путь к файлу лога на диске: $logFile"
+    Write-Host "Путь к файлу лога на диске: $logFile"
+
+	# ---------------------------------------------------------
+    # ОТПРАВКА ПОЧТЫ (Информирование о начале работы отдельным письмом)
+    # ---------------------------------------------------------
+    if ([int]$task.send_message -eq 1) {
+        try {
+            
+            $startHeaderLine = " == START TASK == "
+            
+            # В письмо идет ТОЛЬКО краткая сводка $emailBody
+            $emailContent = $($emailBody -join "`n") + "`n$startHeaderLine"
+            
+            $mes = New-Object System.Net.Mail.MailMessage
+            $mes.From = $mailFrom
+            $mes.To.Add($mailTo)
+            $mes.Subject = $subjectLine + $startHeaderLine
+            $mes.IsBodyHTML = $false
+            $mes.Body = $emailContent
+            
+            # В прикрепленный файл идет ПОЛНЫЙ детальный лог $logFile
+            # if (Test-Path $logFile) {
+            #    $att = New-Object System.Net.Mail.Attachment($logFile)
+            #    $mes.Attachments.Add($att)
+            #}
+
+            $smtp = New-Object Net.Mail.SmtpClient($smtpServer, $smtpPort)
+            $smtp.EnableSSL = $true
+            $smtp.Credentials = New-Object System.Net.NetworkCredential($mailFrom, $mailFromPas)
+            $smtp.Send($mes)
+            $mes.Dispose()
+            $smtp.Dispose()
+            Write-Host "Email sent successfully for task: $($task.dirName)"
+        } catch {
+            Write-Warning "Failed to send email for task: $_"
+        }
+    }
+
+	#############################################
+
     Write-Host "Processing task: $($task.copyed_directory) -> $fullRemotePath"
 
     try {
@@ -226,13 +262,6 @@ foreach ($task in $tasksList) {
         continue
     }
 
-    $header = "$($task.copyed_directory) => $($task.remoteBasePath)/$($task.remoteBackupFolder)/$date"
-    Write-DetailLog $header
-    Write-EmailLog $header
-    
-    # Путь к файлу лога в системе
-    Write-EmailLog "Путь к файлу лога на диске: $logFile"
-    Write-Host "Путь к файлу лога на диске: $logFile"
     Write-EmailLog "------------------------------------------------------------------------------"
 
     # ---------------------------------------------------------
