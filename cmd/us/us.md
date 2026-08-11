@@ -29,3 +29,5 @@ sAMAccountName   : t.test
 title            : Должность
 userPrincipalName: test@mail.ru
 ```
+---
+> Для `-c, --computer` поиск проходит по атрибуту info.

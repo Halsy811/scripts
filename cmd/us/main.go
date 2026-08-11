@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	fileName    = "config.json"
+	fileName    = "us.json"
 	serviceName = "Script_us"
 )
 
