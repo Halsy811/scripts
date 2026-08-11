@@ -22,10 +22,10 @@ import (
 
 	flag "github.com/spf13/pflag"
 
-	"us/mod/auth"
-	"us/mod/file"
-	"us/mod/formater"
-	"us/mod/ldap"
+	file "scripts/internal"
+	"scripts/pkg/auth"
+	"scripts/pkg/formater"
+	"scripts/pkg/ldaphelpers"
 )
 
 const (
@@ -48,23 +48,18 @@ func main() {
 
 	if file.IsFile(fileName) {
 		err := config.RestoreFromJSON(config, fileName)
-
 		if err != nil {
-			// err
 			fmt.Println("Не удалось восстановить параметры из файла конфигурации\nИспользуйте --config для создания файла")
 			return
 		}
 	}
 
-	// Хранит ключи по которым нужно искать
-	searcher := &ldap.SearcherType{}
-	searcher.New()
+	searcher := ldaphelpers.NewSearcher("user")
 
 	switch {
 	case *fconfig:
 		err := config.New(fileName)
 		if err != nil {
-			// err
 			fmt.Println("Ошибка при создании файла конфигурации")
 			return
 		}
@@ -97,10 +92,12 @@ func main() {
 		return
 	}
 
-	connector := &ldap.LDAPConnectorType{}
-
-	connector.New(config.Domain, config.UserName, string(pass))
-	defer connector.Close()
+	conn, err := ldaphelpers.DialAndBindNTLM(config.Domain, config.UserName, string(pass))
+	if err != nil {
+		fmt.Printf("Ошибка подключения к LDAP: %v\n", err)
+		return
+	}
+	defer conn.Close()
 
 	var demoListAttr = []string{
 		"cn",
@@ -118,10 +115,19 @@ func main() {
 		"objectSid",
 	}
 
-	entries := searcher.SearchByAttrib(connector, demoListAttr, "user")
-
-	for _, entry := range entries {
-		formater.FormatAsNestedList(ldap.ConvertEntryToMap(entry))
+	baseDN := ldaphelpers.ParseDomainToBaseDN(config.Domain)
+	entries, err := searcher.Search(conn, baseDN, demoListAttr)
+	if err != nil {
+		fmt.Printf("Ошибка поиска LDAP: %v\n", err)
+		return
 	}
 
+	for _, entry := range entries {
+		groups := ldaphelpers.ConvertEntryToMap(entry)
+		groups["groups"], err = ldaphelpers.GetUserGroupNames(conn, baseDN, entry.DN)
+		if err != nil {
+			fmt.Printf("Ошибка поиска групп пользователя: %v\n", err)
+		}
+		formater.FormatAsNestedList(groups)
+	}
 }

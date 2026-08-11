@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"us/mod/auth"
-	ljson "us/mod/json"
+	"scripts/pkg/auth"
+	myjson "scripts/pkg/json"
 )
 
 type ConfigType struct {
@@ -39,13 +39,13 @@ func (p *ConfigType) New(fileName string) error {
 	p.UserName = credentials.GetLogin()
 	p.ServiceName = credentials.GetServiceName()
 
-	err = ljson.WriteJSONInFile(p, fileName)
+	err = myjson.WriteJSONInFile(p, fileName)
 
 	return nil
 }
 
 func (p *ConfigType) RestoreFromJSON(data *ConfigType, fileName string) error {
-	err := ljson.ReadJSONInFile(data, fileName)
+	err := myjson.ReadJSONInFile(data, fileName)
 
 	return err
 }

@@ -10,11 +10,11 @@ import (
 Форматирование в виде листа (2 уровня вложенности)
 Пример:
 
-	key1: value1
-		value2
-		value3
-	key2: value1
-		value2
+	key1: 	value1
+		  	value2
+		  	value3
+	key2: 	value1
+		  	value2
 */
 func FormatList1(data *map[string][]string) {
 
@@ -22,7 +22,7 @@ func FormatList1(data *map[string][]string) {
 
 // Форматированный вывод коллекции в виде list
 func FormatAsNestedList(data map[string][]string) {
-	fmt.Println("---")
+	fmt.Printf("\n------------------------------\n")
 
 	keys := make([]string, 0, len(data))
 	for k := range data {

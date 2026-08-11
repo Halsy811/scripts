@@ -1,0 +1,46 @@
+version: '3'
+
+vars:
+  DIST_DIR: distr
+  GOFLAGS: -buildvcs=false
+
+tasks:
+  default:
+    deps: [build-all]
+
+  build-all:
+    desc: Собрать все утилиты
+    cmds:
+      - task: build
+        vars: { APP: '{{.ITEM}}' }
+    sources:
+      - cmd/*/main.go
+      - internal/**/*.go
+      - pkg/**/*.go
+    generates:
+      - "{{.DIST_DIR}}/*.exe"
+    loop:
+      - us
+      - ldap-check
+      - report-gen
+
+  build:
+    desc: Собрать одну утилиту
+    # Создаём папку через mkdir -p (работает на Windows в Taskfile)
+    preconditions:
+      - sh: mkdir -p {{.DIST_DIR}}
+        msg: "failed to create {{.DIST_DIR}}"
+    cmds:
+      - go build {{.GOFLAGS}} -o {{.DIST_DIR}}/{{.APP}}.exe ./cmd/{{.APP}}
+    silent: true
+
+  us:
+    desc: Собрать us.exe
+    deps:
+      - task: build
+        vars: { APP: us }
+
+  clean:
+    desc: Удалить все exe
+    cmds:
+      - powershell -Command "Remove-Item '{{.DIST_DIR}}\\*.exe' -Force -ErrorAction SilentlyContinue"

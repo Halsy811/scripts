@@ -21,7 +21,7 @@ func WriteJSONInFile(data any, filename string) error {
 	return nil
 }
 
-// Чтение JSON
+// Чтение структуры из JSON
 func ReadJSONInFile(data any, filename string) error {
 
 	fileData, err := os.ReadFile(filename)
