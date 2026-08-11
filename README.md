@@ -6,5 +6,5 @@ Powershell:
 - [backup_script_local.ps1](Windows\PowerShell\backup_script_local.ps1) - Резервное копирование на основе `Robocopy`
 
 Go:
-- [us](cmd\us) - Получение информации из Active Directory
+- [us](cmd\us\us.md) - Получение информации из Active Directory
 - 
