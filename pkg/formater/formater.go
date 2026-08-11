@@ -22,7 +22,7 @@ func FormatList1(data *map[string][]string) {
 
 // Форматированный вывод коллекции в виде list
 func FormatAsNestedList(data map[string][]string) {
-	fmt.Printf("\n------------------------------\n")
+	fmt.Printf("\n------------------------------\n\n")
 
 	keys := make([]string, 0, len(data))
 	for k := range data {
