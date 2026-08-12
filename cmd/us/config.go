@@ -6,8 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"scripts/pkg/auth"
-	myjson "scripts/pkg/json"
+	"github.com/Halsy811/go-litelibs/auth"
+
+	myjson "github.com/Halsy811/go-litelibs/json"
 )
 
 type ConfigType struct {
@@ -33,6 +34,7 @@ func (p *ConfigType) New(fileName string) error {
 
 	// Регистрация в системном хранилище
 	credentials := &auth.CredentialType{}
+	serviceName := ""
 
 	err = credentials.Register(os.Stdin, serviceName, true)
 

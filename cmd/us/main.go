@@ -23,9 +23,10 @@ import (
 	flag "github.com/spf13/pflag"
 
 	file "scripts/internal"
-	"scripts/pkg/auth"
-	"scripts/pkg/formater"
-	"scripts/pkg/ldaphelpers"
+
+	"github.com/Halsy811/go-litelibs/auth"
+	"github.com/Halsy811/go-litelibs/formatter"
+	"github.com/Halsy811/go-litelibs/ldaphelpers"
 )
 
 const (
@@ -128,6 +129,6 @@ func main() {
 		if err != nil {
 			fmt.Printf("Ошибка поиска групп пользователя: %v\n", err)
 		}
-		formater.FormatAsNestedList(groups)
+		formatter.FormatAsNestedList(groups)
 	}
 }
