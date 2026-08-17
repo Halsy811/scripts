@@ -1,11 +1,19 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
+	"os"
+	"os/signal"
 	"strings"
+	"sync"
+	"syscall"
+	"time"
 
 	"github.com/spf13/pflag"
+
+	"github.com/masterzen/winrm"
 )
 
 //go:embed winrm-ps/info_basic.ps1
@@ -41,9 +49,16 @@ var (
 	}
 )
 
+type resultScr struct {
+	stdout   string
+	stderr   string
+	exitCode int
+	err      error
+}
+
 func main() {
-	fUser := pflag.StringP("user", "u", "", "Имя пользователя для подключения к WinRM")
-	fPass := pflag.StringP("pass", "p", "", "Пароль пользователя для подключения к WinRM")
+	fUser := pflag.StringP("user", "u", "MAIN\\n.zmeev", "Имя пользователя для подключения к WinRM")
+	fPass := pflag.StringP("pass", "p", "Encapsulation", "Пароль пользователя для подключения к WinRM")
 	fEndpoint := pflag.StringP("endpoint", "e", "", "Цель для сканирования (IP-адрес, имя хоста, подсеть, диапазон адресов)")
 	fFilter := pflag.StringP("filter", "f", "", "Фильтр для выбора скриптов. Больше информации --manual")
 	fHelp := pflag.Bool("manual", false, "Показать полную справку")
@@ -84,4 +99,59 @@ func main() {
 	// 	fmt.Printf("Выбран скрипт: %s\n", name)
 	// }
 
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	// Перехват системных сигналов. Содержит сам факт что сигнал пришел
+	sigChan := make(chan os.Signal, 1)                      // канал для значений os.Signal с буфером 1
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM) // Когда ОС доставляет процессу SIGINT или SIGTERM, runtime перехватывает его. Runtime создаёт значение os.Signal и отправляет его в sigChan (неблокирующая отправка! если буфер полон — сигнал дропается, поэтому буфер ≥ 1 обязателен)
+
+	dataChan := make(chan resultScr, len(scriptList))
+
+	var wg sync.WaitGroup
+
+	cliWinRM, err := NewClient(*fEndpoint, 5985, *fUser, *fPass)
+	if err != nil {
+		fmt.Printf("Ошибка создания клиента WinRM: %v\n", err)
+		return
+	}
+
+	// Запуск скриптов
+	for _, script := range selectedScripts {
+		wg.Add(1)
+		go scriptExecuterWorker(ctx, dataChan, &wg, cliWinRM, script)
+	}
+
+	select {
+	case <-sigChan:
+		cancel()
+	case result, ok := <-dataChan:
+		if !ok {
+			// Канал закрыт, все скрипты завершены
+			return
+		}
+		fmt.Println("_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_")
+		if result.err != nil {
+			fmt.Printf("Ошибка выполнения: %v\n", result.err)
+		} else {
+			fmt.Printf("Результат выполнения скрипта:\nstdout: %s\nstderr: %s\nexitCode: %d\n", result.stdout, result.stderr, result.exitCode)
+			if result.stderr != "" {
+				fmt.Printf("Stderr: %s\n", result.stderr)
+			}
+		}
+	}
+
+}
+
+func scriptExecuterWorker(ctx context.Context, dataChanOut chan<- resultScr, wg *sync.WaitGroup, cli *winrm.Client, script string) {
+	stdout, stderr, exitCode, err := ExecutePSCommand(ctx, cli, script)
+
+	dataChanOut <- resultScr{
+		stdout:   stdout,
+		stderr:   stderr,
+		exitCode: exitCode,
+		err:      err,
+	}
+
+	wg.Done()
 }

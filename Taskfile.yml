@@ -39,6 +39,12 @@ tasks:
     deps:
       - task: build
         vars: { APP: us }
+  
+  infocomp:
+    desc: Собрать infocomp.exe
+    deps:
+      - task: build
+        vars: { APP: infocomp }
 
   clean:
     desc: Удалить все exe

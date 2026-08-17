@@ -1,8 +1,6 @@
 <#
 Basic system information in JSON.
 #>
-[CmdletBinding()]
-param()
 
 $system = Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction SilentlyContinue
 $result = [PSCustomObject]@{

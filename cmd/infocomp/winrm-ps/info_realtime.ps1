@@ -1,8 +1,6 @@
 <#
 Realtime system uptime and session information in JSON.
 #>
-[CmdletBinding()]
-param()
 
 function Clean-SessionString {
     param([string]$value)

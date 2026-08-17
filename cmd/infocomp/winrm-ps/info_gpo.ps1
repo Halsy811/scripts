@@ -1,8 +1,6 @@
 <#
 Group Policy update information in JSON.
 #>
-[CmdletBinding()]
-param()
 
 function Format-DateTimeString {
     param([datetime]$dateTime)

@@ -1,8 +1,6 @@
 <#
 Hardware inventory information in JSON.
 #>
-[CmdletBinding()]
-param()
 
 function Convert-KBToBytes {
     param([uint64]$KB)

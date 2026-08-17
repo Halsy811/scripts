@@ -1,8 +1,6 @@
 <#
 Network adapter information in JSON.
 #>
-[CmdletBinding()]
-param()
 
 $networkConfigs = Get-NetIPConfiguration -ErrorAction SilentlyContinue | Where-Object { $_.IPv4Address -or $_.IPv6Address }
 $interfaces = foreach ($config in $networkConfigs) {

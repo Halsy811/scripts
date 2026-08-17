@@ -1,8 +1,6 @@
 <#
 Operating system information in JSON.
 #>
-[CmdletBinding()]
-param()
 
 $os = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction SilentlyContinue
 $result = [PSCustomObject]@{
