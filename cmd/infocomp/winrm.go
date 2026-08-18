@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"strings"
 	"time"
 	"unicode/utf16"
 
@@ -14,7 +15,7 @@ import (
 func NewClient(host string, port int, user string, password string) (*winrm.Client, error) {
 	endpoint := winrm.NewEndpoint(
 		host,
-		5985,
+		port,  // 5985
 		false, // HTTP
 		true,  // InsecureSkipVerify
 		nil, nil, nil,
@@ -22,7 +23,6 @@ func NewClient(host string, port int, user string, password string) (*winrm.Clie
 	)
 	params := winrm.DefaultParameters
 	params.Timeout = "PT120S"
-
 	// КЛЮЧЕВОЕ: используем встроенный NTLM-транспорт библиотеки
 	// НЕ нужен go-ntlmssp вообще
 	params.TransportDecorator = func() winrm.Transporter {
@@ -32,17 +32,39 @@ func NewClient(host string, port int, user string, password string) (*winrm.Clie
 	client, err := winrm.NewClientWithParameters(endpoint, user, password, params)
 	if err != nil {
 		err = fmt.Errorf("Ошибка создания клиента: %v\n", err)
+		return nil, err
 	}
 
 	return client, err
 }
 
-func ExecutePSCommand(ctx context.Context, client *winrm.Client, script string) (stdout string, stderr string, exitCode int, err error) {
+func ExecutePSScript(ctx context.Context, client *winrm.Client, script string) (stdoutStr string, stderrStr string, exitCode int, err error) {
 
-	cmd := winrm.Powershell(script)
-	// cmd := fmt.Sprintf("powershell -NoProfile -EncodedCommand %s", encoded)
+	// Команда PowerShell для чтения скрипта из stdin
+	// -Command - означает "читать команду из stdin"
+	cmd := "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command -"
 
-	return client.RunPSWithContext(ctx, cmd)
+	// Создаем буферы для сбора вывода
+	var stdout, stderr strings.Builder
+
+	// Потоковый вывод через io.Writer
+	exitCode, err = client.RunWithContextWithInput(
+		ctx,
+		cmd,
+		&stdout,
+		&stderr,
+		strings.NewReader(winrm.Powershell(script)),
+	)
+
+	if err != nil {
+		err = fmt.Errorf("Ошибка выполения WinRM: %v", err)
+		return "", "", exitCode, err
+	}
+
+	stdoutStr = stdout.String()
+	stderrStr = stderr.String()
+
+	return stdoutStr, stderrStr, exitCode, nil
 }
 
 // ==============================================

@@ -57,8 +57,8 @@ type resultScr struct {
 }
 
 func main() {
-	fUser := pflag.StringP("user", "u", "MAIN\\n.zmeev", "Имя пользователя для подключения к WinRM")
-	fPass := pflag.StringP("pass", "p", "Encapsulation", "Пароль пользователя для подключения к WinRM")
+	fUser := pflag.StringP("user", "u", "", "Имя пользователя для подключения к WinRM")
+	fPass := pflag.StringP("pass", "p", "", "Пароль пользователя для подключения к WinRM")
 	fEndpoint := pflag.StringP("endpoint", "e", "", "Цель для сканирования (IP-адрес, имя хоста, подсеть, диапазон адресов)")
 	fFilter := pflag.StringP("filter", "f", "", "Фильтр для выбора скриптов. Больше информации --manual")
 	fHelp := pflag.Bool("manual", false, "Показать полную справку")
@@ -144,7 +144,8 @@ func main() {
 }
 
 func scriptExecuterWorker(ctx context.Context, dataChanOut chan<- resultScr, wg *sync.WaitGroup, cli *winrm.Client, script string) {
-	stdout, stderr, exitCode, err := ExecutePSCommand(ctx, cli, script)
+
+	stdout, stderr, exitCode, err := ExecutePSScript(ctx, cli, script)
 
 	dataChanOut <- resultScr{
 		stdout:   stdout,
