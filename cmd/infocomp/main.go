@@ -167,16 +167,6 @@ func main() {
 		}
 	}
 
-	// Пример использования отфильтрованных скриптов
-	// if len(selectedScripts) == 0 {
-	// 	fmt.Println("Скрипты не найдены по указанному фильтру.")
-	// 	return
-	// }
-
-	// for name := range selectedScripts {
-	// 	fmt.Printf("Выбран скрипт: %s\n", name)
-	// }
-
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
