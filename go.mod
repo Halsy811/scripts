@@ -3,7 +3,7 @@ module scripts
 go 1.26.5
 
 require (
-	github.com/Halsy811/go-litelibs v1.0.2
+	github.com/Halsy811/go-litelibs v1.1.0
 	github.com/Ullaakut/nmap v2.0.2+incompatible
 	github.com/masterzen/winrm v0.0.0-20260407182533-5570be7f80cf
 	github.com/spf13/pflag v1.0.10

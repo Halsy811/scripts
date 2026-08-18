@@ -4,6 +4,8 @@ github.com/ChrisTrenkamp/goxpath v0.0.0-20210404020558-97928f7e12b6 h1:w0E0fgc1Y
 github.com/ChrisTrenkamp/goxpath v0.0.0-20210404020558-97928f7e12b6/go.mod h1:nuWgzSkT5PnyOd+272uUmV0dnAnAn42Mk7PiQC5VzN4=
 github.com/Halsy811/go-litelibs v1.0.2 h1:mmA2/x1L8697nGRCMfNqAIIuOBk/xx+oHdKOArwAeFA=
 github.com/Halsy811/go-litelibs v1.0.2/go.mod h1:oVgsfFi9wzFTin5JGSgEd3b6PxuRVq8jbUeWUrEsPLs=
+github.com/Halsy811/go-litelibs v1.1.0 h1:pywM4d6WuXQWBcqUViTDHVaiRKpD6Yh+JHbmLCD8q0w=
+github.com/Halsy811/go-litelibs v1.1.0/go.mod h1:oVgsfFi9wzFTin5JGSgEd3b6PxuRVq8jbUeWUrEsPLs=
 github.com/Ullaakut/nmap v2.0.2+incompatible h1:edw45QpSQBQ2B/Hqfg86Bt5rrK79tp/fAcqIHyNSdQs=
 github.com/Ullaakut/nmap v2.0.2+incompatible/go.mod h1:fkC066hwfcoKwlI7DS2ARTggSVtBTZYCjVH1TzuTMaQ=
 github.com/alexbrainman/sspi v0.0.0-20250919150558-7d374ff0d59e h1:4dAU9FXIyQktpoUAgOJK3OTFc/xug0PCXYCqU0FgDKI=
