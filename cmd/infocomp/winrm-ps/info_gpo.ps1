@@ -1,7 +1,7 @@
 <#
 Group Policy update information in JSON.
 #>
-
+chcp 65001 | Out-Null
 function Format-DateTimeString {
     param([datetime]$dateTime)
     if (-not $dateTime) { return $null }

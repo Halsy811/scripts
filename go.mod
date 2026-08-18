@@ -7,6 +7,7 @@ require (
 	github.com/Ullaakut/nmap v2.0.2+incompatible
 	github.com/masterzen/winrm v0.0.0-20260407182533-5570be7f80cf
 	github.com/spf13/pflag v1.0.10
+	golang.org/x/term v0.45.0
 )
 
 require (
@@ -35,6 +36,5 @@ require (
 	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/term v0.45.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
 )

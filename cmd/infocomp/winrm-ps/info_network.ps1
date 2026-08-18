@@ -1,6 +1,7 @@
 <#
 Network adapter information in JSON.
 #>
+chcp 65001 | Out-Null
 
 $networkConfigs = Get-NetIPConfiguration -ErrorAction SilentlyContinue | Where-Object { $_.IPv4Address -or $_.IPv6Address }
 $interfaces = foreach ($config in $networkConfigs) {

@@ -2,6 +2,8 @@
 Realtime system uptime and session information in JSON.
 #>
 
+chcp 65001 | Out-Null
+
 function Clean-SessionString {
     param([string]$value)
     if (-not $value) { return $null }

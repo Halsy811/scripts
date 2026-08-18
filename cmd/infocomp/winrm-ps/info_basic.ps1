@@ -1,6 +1,7 @@
 <#
 Basic system information in JSON.
 #>
+chcp 65001 | Out-Null
 
 $system = Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction SilentlyContinue
 $result = [PSCustomObject]@{

@@ -1,6 +1,7 @@
 <#
 Operating system information in JSON.
 #>
+chcp 65001 | Out-Null
 
 $os = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction SilentlyContinue
 $result = [PSCustomObject]@{
