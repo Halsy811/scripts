@@ -17,7 +17,9 @@ import (
 
 	"github.com/Halsy811/go-litelibs/auth"
 	"github.com/Halsy811/go-litelibs/formatter"
+	"github.com/Halsy811/go-litelibs/logger"
 	"github.com/spf13/pflag"
+	"go.uber.org/zap"
 	"golang.org/x/term"
 )
 
@@ -112,6 +114,7 @@ func main() {
 	fGB := pflag.BoolP("gigabyte", "g", false, "Еденицы измерения GB")
 	fconf := pflag.Bool("conf", false, "Зарегистрировать учетные данные утилиты в системном хранилище")
 	frmconf := pflag.Bool("rmconf", false, "Удалить учетные данные утилиты из системного хранилища")
+	flog := pflag.BoolP("log", "l", false, "Вывод подробного лога при выполнении")
 
 	pflag.Parse()
 
@@ -128,26 +131,40 @@ func main() {
 		return
 	}
 
+	logs, err := logger.CreateLoggerConsole(true, logger.DisableLog)
+	if err != nil {
+		fmt.Println("Внетренняя ошибка при выделении места под logger")
+	}
+
+	// Лог
+	if *flog {
+		logs.SetLevel(logger.DebugLevel)
+	} else {
+		logs.Disable()
+	}
+
+	// Конфиг
 	if *fconf {
 		credentials := &auth.CredentialType{}
 		if err := credentials.Register(os.Stdin, credentialServiceName, true); err != nil {
-			fmt.Printf("Ошибка регистрации в системном хранилище: %v\n", err)
+			logs.Error("Ошибка регистрации в системном хранилище: %v\n", zap.Error(err))
 			return
 		}
 		if err := saveCredentialUser(credentials.GetLogin()); err != nil {
-			fmt.Printf("Предупреждение: не удалось сохранить логин по умолчанию: %v\n", err)
+			logs.Warn("Предупреждение: не удалось сохранить логин по умолчанию: %v\n", zap.Error(err))
 		}
-		fmt.Printf("Учетные данные сохранены в системном хранилище (%s)\n", credentialServiceName)
+		logs.Info("Процесс внесения учетных данных в системное хранилище паролей завершено\n", zap.String("Service name", credentialServiceName))
 		return
 	}
 
+	// Удалить конфиг
 	if *frmconf {
 		if *fUser == "" {
 			fmt.Println("Для удаления учетных данных укажите параметр -u/--user")
 			return
 		}
 		if err := auth.RemoveRegister(credentialServiceName, *fUser); err != nil {
-			fmt.Printf("Ошибка удаления учетных данных из системного хранилища: %v\n", err)
+			logs.Error("Ошибка удаления учетных данных из системного хранилища", zap.Error(err))
 			return
 		}
 		fmt.Printf("Учетные данные удалены из системного хранилища (%s)\n", credentialServiceName)
@@ -155,7 +172,7 @@ func main() {
 	}
 
 	if err := resolveCredentials(fUser, fPass); err != nil {
-		fmt.Printf("Ошибка аутентификации: %v\n", err)
+		logs.Error("Ошибка аутентификации", zap.Error(err))
 		return
 	}
 
@@ -196,13 +213,21 @@ func main() {
 	// В библиотеке masterzen/winrm NTLM-состояние и HTTP-сессия не являются потокобезопасными,
 	// поэтому общий client на несколько параллельных вызовов даёт нестабильный 401.
 	// Запуск скриптов
-	for _, script := range selectedScripts {
+	for name, script := range selectedScripts {
 		wg.Add(1)
 		go scriptExecuterWorker(ctx, dataChan, &wg, *fEndpoint, *fUser, *fPass, script)
+		logs.Info("Запущен скрипт", zap.String("Скрипт", name))
 	}
 
 	go func() {
 		wg.Wait()
+
+		ids := make([]string, 0, len(selectedScripts))
+		for id := range selectedScripts {
+			ids = append(ids, id)
+		}
+
+		logs.Info("Все процессы завершены", zap.Any("Скрипты:", ids))
 		close(dataChan)
 	}()
 
@@ -212,21 +237,19 @@ Loop:
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Println("Завершение по таймауту или сигналу.")
-			// ++++++ Доделать более жесткое завершение горутин
-
+			fmt.Println("Завершение по таймауту или сигналу")
+			return
 		case <-sigChan:
 			cancel()
-			fmt.Println("Получен SIGINT/SIGTERM, завершение работы.")
+			fmt.Println("Получен SIGINT/SIGTERM, завершение работы")
 
 		case result, ok := <-dataChan:
 			if !ok {
-				fmt.Println("Все скрипты завершены")
 				break Loop
 			}
 
 			if result.err != nil {
-				fmt.Printf("Ошибка выполнения: %v\n", result.err)
+				logs.Error("Ошибка выполнения", zap.Error(result.err))
 			} else {
 				jsons = append(jsons, result.stdout)
 			}
@@ -235,14 +258,14 @@ Loop:
 
 	margeJSON, err := mergeJSON(jsons...)
 	if err != nil {
-		fmt.Printf("Ошибка обьединения json: %v", err)
+		logs.Error("Ошибка обьединения json", zap.Error(err))
 	}
 
 	if !*fjson { // Человекочитаемый формат
 		var res map[string]any
 		err = json.Unmarshal(margeJSON, &res)
 		if err != nil {
-			fmt.Printf("Ошибка разбора JSON: %v\n", err)
+			logs.Error("Ошибка разбора JSON", zap.Error(err))
 			return
 		}
 

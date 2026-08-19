@@ -3,10 +3,11 @@ module scripts
 go 1.26.5
 
 require (
-	github.com/Halsy811/go-litelibs v1.1.0
+	github.com/Halsy811/go-litelibs v1.1.2
 	github.com/Ullaakut/nmap v2.0.2+incompatible
 	github.com/masterzen/winrm v0.0.0-20260407182533-5570be7f80cf
 	github.com/spf13/pflag v1.0.10
+	go.uber.org/zap v1.28.0
 	golang.org/x/term v0.45.0
 )
 
@@ -33,6 +34,7 @@ require (
 	github.com/masterzen/simplexml v0.0.0-20190410153822-31eea3082786 // indirect
 	github.com/tidwall/transform v0.0.0-20201103190739-32f242e2dbde // indirect
 	github.com/zalando/go-keyring v0.2.8 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
