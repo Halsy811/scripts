@@ -42,6 +42,9 @@ var ps1_info_system string
 //go:embed winrm-ps/info_soft.ps1
 var ps1_info_soft string
 
+//go:embed winrm-ps/info_printer.ps1
+var ps1_info_printer string
+
 // HELP
 //
 //go:embed winrm-ps/info_help.help
@@ -53,10 +56,10 @@ var (
 		"gpo":      ps1_info_gpo,
 		"hardware": ps1_info_hardware,
 		"net":      ps1_info_network,
-		"net2":     ps1_info_system,
 		"realtime": ps1_info_realtime,
 		"soft":     ps1_info_soft,
 		"system":   ps1_info_system,
+		"printer":  ps1_info_printer,
 	}
 )
 
@@ -102,7 +105,7 @@ func main() {
 	fPass := pflag.StringP("pass", "p", "", "Пароль пользователя для подключения к WinRM")
 	fEndpoint := pflag.StringP("endpoint", "e", "", "Цель для сканирования (IP-адрес, имя хоста, подсеть, диапазон адресов)")
 	fFilter := pflag.StringP("filter", "f", "", "Фильтр для выбора скриптов. Больше информации --manual")
-	fHelp := pflag.Bool("manual", false, "Показать полную справку")
+	fHelp := pflag.Bool("manual", false, "Показать дополнительную справку")
 	fjson := pflag.Bool("json", false, "Вывод в виде json")
 	fKB := pflag.BoolP("kilobyte", "k", false, "Еденицы измерения KB")
 	fMB := pflag.BoolP("megabyte", "m", false, "Еденицы измерения MB")
@@ -114,7 +117,14 @@ func main() {
 
 	// Вывод справки, если указана опция -h или --help
 	if *fHelp {
-		fmt.Print(helpText)
+		fmt.Println(helpText)
+
+		fmt.Println("-f ([print,net,sys]|[printer]) - Набор выполняемых скриптов")
+		fmt.Println("Если указанный патерн является частью нескольких скриптов, то они все будут выполнены.")
+		fmt.Println("Допустимые значения:")
+		for name := range scriptList {
+			fmt.Printf("\t%s\n", name)
+		}
 		return
 	}
 

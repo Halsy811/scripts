@@ -34,4 +34,9 @@ function Get-GroupPolicyUpdateInfo {
 }
 
 $result = Get-GroupPolicyUpdateInfo
-$result | ConvertTo-Json -Depth 5
+
+$outResult = [PSCustomObject]@{
+    GPO = $result
+}
+
+$outResult | ConvertTo-Json -Depth 5

@@ -22,6 +22,6 @@ $interfaces = foreach ($config in $networkConfigs) {
 }
 
 $result = [PSCustomObject]@{
-    NetworkAdapters = $interfaces
+    Network = $interfaces
 }
 $result | ConvertTo-Json -Depth 5

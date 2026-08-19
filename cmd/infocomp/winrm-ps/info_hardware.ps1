@@ -151,8 +151,12 @@ try {
         VideoControllers = $videoControllers
     }
 
+    $outResult = [PSCustomObject]@{
+        Hardware = $result
+    }
+
     # Convert to JSON with strict error handling
-    $jsonOutput = $result | ConvertTo-Json -Depth 6 -ErrorAction Stop
+    $jsonOutput = $outResult | ConvertTo-Json -Depth 6 -ErrorAction Stop
     
     # Output ONLY valid JSON to stdout
     Write-Output $jsonOutput

@@ -10,12 +10,9 @@ function Get-SoftwareFromRegistry {
             $prop = Get-ItemProperty -Path $key.PSPath -ErrorAction SilentlyContinue
             if ($prop.DisplayName) {
                 [PSCustomObject]@{
-                    Name            = $prop.DisplayName
-                    Version         = $prop.DisplayVersion
-                    Publisher       = $prop.Publisher
-                    InstallDate     = $prop.InstallDate
-                    UninstallString = $prop.UninstallString
-                    Source          = $Source
+                    Name    = $prop.DisplayName
+                    Version = $prop.DisplayVersion
+                    User    = $Source
                 }
             }
         }
@@ -24,8 +21,8 @@ function Get-SoftwareFromRegistry {
 
 # 1. Собираем системное ПО (64-бит и 32-бит)
 $computerSoft = @()
-$computerSoft += Get-SoftwareFromRegistry -RegistryPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" -Source "HKLM-64"
-$computerSoft += Get-SoftwareFromRegistry -RegistryPath "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" -Source "HKLM-32"
+$computerSoft += Get-SoftwareFromRegistry -RegistryPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" -Source "Computer"
+$computerSoft += Get-SoftwareFromRegistry -RegistryPath "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" -Source "Computer"
 
 # 2. Собираем пользовательское ПО (проходим по всем загруженным профилям в HKEY_USERS)
 $usersSoft = @()
@@ -39,30 +36,44 @@ foreach ($sid in $userSIDs) {
     try {
         $objSID = New-Object System.Security.Principal.SecurityIdentifier($sidName)
         $userName = $objSID.Translate([System.Security.Principal.NTAccount]).Value
+        # Убираем домен если есть
+        if ($userName -match '\\') {
+            $userName = $userName -replace '^.+\\',''
+        }
     } catch {
         $userName = $sidName
     }
 
     $userPath = "Registry::HKEY_USERS\$sidName\Software\Microsoft\Windows\CurrentVersion\Uninstall"
-    $foundSoft = Get-SoftwareFromRegistry -RegistryPath $userPath -Source "HKU-$userName"
+    $foundSoft = Get-SoftwareFromRegistry -RegistryPath $userPath -Source $userName
     
     if ($foundSoft) {
-        foreach ($item in $foundSoft) {
-            $item | Add-Member -MemberType NoteProperty -Name "User" -Value $userName
-            $usersSoft += $item
-        }
+        $usersSoft += $foundSoft
+    }
+}
+
+# Группируем ПО по компьютеру и пользователям
+$computerGroup = @{}
+if ($computerSoft) {
+    $computerGroup[$(hostname)] = @($computerSoft | Select-Object Name, Version)
+}
+
+$usersGroup = @{}
+if ($usersSoft) {
+    # Группируем по пользователю
+    $groupedByUser = $usersSoft | Group-Object -Property User
+    foreach ($group in $groupedByUser) {
+        $usersGroup[$group.Name] = @($group.Group | Select-Object Name, Version)
     }
 }
 
 # Формируем итоговый объект согласно требуемому формату
-$result = @(
-    [PSCustomObject]@{
-        Soft = [PSCustomObject]@{
-            Users    = $usersSoft
-            Computer = $computerSoft
-        }
+$result = [PSCustomObject]@{
+    Soft = [PSCustomObject]@{
+        Computer = $computerGroup
+        Users    = $usersGroup
     }
-)
+}
 
 # Вывод в JSON
 $result | ConvertTo-Json -Depth 10

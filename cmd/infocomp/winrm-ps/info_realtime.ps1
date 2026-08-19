@@ -136,4 +136,9 @@ $result = [PSCustomObject]@{
     Sessions = $sessions
     LoggedOnUsers = $loggedOnUsers
 }
-$result | ConvertTo-Json -Depth 5
+
+$outResult = [PSCustomObject]@{
+    Realtime = $result
+}
+
+$outResult | ConvertTo-Json -Depth 5

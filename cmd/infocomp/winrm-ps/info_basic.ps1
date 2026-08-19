@@ -8,4 +8,9 @@ $result = [PSCustomObject]@{
     ComputerName = if ($system) { $system.Name } else { $null }
     DomainName   = if ($system) { if ($system.PartOfDomain) { $system.Domain } else { $system.Workgroup } } else { $null }
 }
-$result | ConvertTo-Json -Depth 4
+
+$outResult = [PSCustomObject]@{
+    Basic = $result
+}
+
+$outResult | ConvertTo-Json -Depth 4
